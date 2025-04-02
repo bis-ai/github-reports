@@ -1,0 +1,183 @@
+# ==================================================================================
+# GITHUB DEVELOPER PRODUCTIVITY REPORTING TOOL.
+# ----------------------------------------------------------------------------------
+# This script generates a detailed GitHub productivity report
+# for multiple teams, analyzing metrics like:
+# - Commit counts, lines added/deleted, etc
+# - Created On / By: 2025.03.20 / bishal.kumar@narvar.com
+# - Updated On / By / What: __
+# ***** To regenerate github token: https://github.com/settings/tokens/2170551023/regenerate
+# ==================================================================================
+
+import requests
+import os
+from datetime import datetime, timedelta, timezone
+
+# Retrieve GitHub token from environment variable for security purposes
+github_token = os.getenv('GITHUB_TOKEN')  # Store your GitHub token securely
+headers = {'Authorization': f'token {github_token}'}
+
+# Team details mapping for repositories and members
+TEAMS = {
+    '1': ['narvarjosh', 'vamsiprasanth-narvar', 'chatfield-narvar', 'MathewSharff'],  # Assist
+    '2': ['bala-narvar', 'nuthan-reddy', 'gagana-deepu', 'debarko'],  # Carriers
+    '3': ['Martin-Narvar', 'ishasingh0172', 'ritesh-narvar', 'scotthavensnarvar'],  # Messaging
+    '4': ['ishasingh0172','debarko', 'dipankarbanik', 'phuongle1902', 'bis-ai']  # Narvar-Eng
+}
+TEAM_NAMES = {
+    '1': 'ASSIST',
+    '2': 'CARRIERS',
+    '3': 'MESSAGING',
+    '4': 'NARVAR-ENG'
+}
+
+# Custom date range for filtering commits
+DAYS_BACK = 30  # Change this value to adjust the timeline filter
+now_utc = datetime.now(timezone.utc)
+since_date = (now_utc - timedelta(days=DAYS_BACK)).strftime('%Y-%m-%d %H:%M (UTC)')
+current_date = now_utc.strftime('%Y-%m-%d %H:%M (UTC)')
+
+# Fetch repositories for a given user
+def get_user_repos(username):
+    url = f'https://api.github.com/users/{username}/repos'
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return [repo['full_name'] for repo in response.json()]
+
+# Fetch commits for a given user's repositories within a specific timeframe
+def get_user_commits(username):
+    commits = []
+    repos = get_user_repos(username)
+
+    for repo in repos:
+        url = f'https://api.github.com/repos/{repo}/commits'
+        params = {
+            'author': username,
+            'since': since_date  # New date filter added
+        }
+        response = requests.get(url, headers=headers, params=params)
+        if response.status_code == 200:
+            for commit in response.json():
+                commit_stats_url = commit['url']  # Get commit stats URL
+                stats_response = requests.get(commit_stats_url, headers=headers)
+                stats_data = stats_response.json().get('stats', {})
+                commits.append({
+                    'commit_hash': commit['sha'],
+                    'commit_date': commit['commit']['author']['date'],
+                    'author_name': username,
+                    'commit_message': commit['commit']['message'],
+                    'lines_added': stats_data.get('additions', 0),
+                    'lines_deleted': stats_data.get('deletions', 0)
+                })
+    return commits
+
+# Generate a team-level report with enhanced UI and detailed remarks
+def generate_team_report(team_number):
+    report = []
+    if team_number not in TEAMS:
+        print(f"Team '{team_number}' not found.")
+        return report
+
+    print(f"\n********************* GITHUB PRODUCTIVITY REPORTING FOR {TEAM_NAMES[team_number]} ***************************\n")
+    print(f"Reporting Period: {since_date} to {current_date}\n")
+    print("Author               Commits    Last Commit         Lines Added      Lines Deleted  Avg Commit Size  Active Days   PR/Commit  Time/Commit  Code Churn")
+    print("-" * 150)
+
+    for member in TEAMS[team_number]:
+        commits = get_user_commits(member)
+        total_lines_added = sum(commit['lines_added'] for commit in commits)
+        total_lines_deleted = sum(commit['lines_deleted'] for commit in commits)
+        avg_commit_size = total_lines_added / len(commits) if commits else 0
+        active_days = len(set(commit['commit_date'].split('T')[0] for commit in commits))
+        pr_to_commit_ratio = round(len(commits) / active_days, 2) if active_days > 0 else 0
+        time_between_commits = round(DAYS_BACK / len(commits), 2) if commits else 0
+        code_churn = total_lines_added + total_lines_deleted
+
+        if commits:
+            last_commit_date = max(commit['commit_date'] for commit in commits)
+            report.append({
+                'author_name': member,
+                'commit_count': len(commits),
+                'last_commit_date': datetime.strptime(last_commit_date, '%Y-%m-%dT%H:%M:%SZ').strftime('%Y-%m-%d %H:%M:%S'),
+                'lines_added': total_lines_added,
+                'lines_deleted': total_lines_deleted,
+                'avg_commit_size': avg_commit_size,
+                'active_days': active_days,
+                'pr_to_commit_ratio': pr_to_commit_ratio,
+                'time_between_commits': time_between_commits,
+                'code_churn': code_churn
+            })
+        else:
+            report.append({
+                'author_name': member,
+                'commit_count': 0,
+                'last_commit_date': 'No commits',
+                'lines_added': 0,
+                'lines_deleted': 0,
+                'avg_commit_size': 0,
+                'active_days': 0,
+                'pr_to_commit_ratio': 0,
+                'time_between_commits': 0,
+                'code_churn': 0
+            })
+
+    for entry in report:
+        print(f"{entry['author_name']:<20} {entry['commit_count']:<10} {entry['last_commit_date']:<20} {entry['lines_added']:<15} {entry['lines_deleted']:<15} {entry['avg_commit_size']:<15} {entry['active_days']:<12} {entry['pr_to_commit_ratio']:<15} {entry['time_between_commits']:<15} {entry['code_churn']:<10}")
+    print("-" * 150)
+
+    # Display definitions for report metrics
+    print("\nDEFINITIONS:")
+    print("Commits: Total number of commits made by the developer.")
+    print("Last Commit: Date of the most recent commit by the developer.")
+    print("Avg Commit Size: Average lines of code added per commit.")
+    print("Active Days: Number of days the developer committed code.")
+    print("PR/Commit Ratio: Ratio of pull requests raised per commit.")
+    print("Time/Commit: Average time in days between commits.")
+    print("\n**************************End of Github Productivity Reporting******************************\n\n")
+
+
+# Main program logic
+def main():
+    print("*** Available Teams ***")
+    for key, name in TEAM_NAMES.items():
+        print(f"{key}. {name}")
+
+    team_number = input("Enter team number: ").strip()
+    generate_team_report(team_number)
+
+if __name__ == '__main__':
+    main()
+
+
+#################### SAMPLE OUTPUT REPORT ###################
+
+# bishalkumar@BishalKumar-14MBPM3Pro-1277 my_python % python3 git_reports4.py
+# *** Available Teams ***
+# 1. ASSIST
+# 2. CARRIERS
+# 3. MESSAGING
+# 4. NARVAR-ENG
+# Enter team number: 4
+
+# ********************* GITHUB PRODUCTIVITY REPORTING FOR NARVAR-ENG ***************************
+
+# Reporting Period: 2025-02-20 11:23 (UTC) to 2025-03-22 11:23 (UTC)
+
+# Author               Commits    Last Commit         Lines Added      Lines Deleted  Avg Commit Size  Active Days   PR/Commit  Time/Commit  Code Churn
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
+# ishasingh0172        1          2025-03-16 19:29:29  36              0               36.0            1            1.0             30.0            36        
+# debarko              0          No commits           0               0               0               0            0               0               0         
+# dipankarbanik        0          No commits           0               0               0               0            0               0               0         
+# phuongle1902         0          No commits           0               0               0               0            0               0               0         
+# bis-ai               2          2025-03-20 06:52:05  18              7               9.0             1            2.0             15.0            25        
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# DEFINITIONS:
+# Commits: Total number of commits made by the developer.
+# Last Commit: Date of the most recent commit by the developer.
+# Avg Commit Size: Average lines of code added per commit.
+# Active Days: Number of days the developer committed code.
+# PR/Commit Ratio: Ratio of pull requests raised per commit.
+# Time/Commit: Average time in days between commits.
+
+# **************************End of Github Productivity Reporting******************************
