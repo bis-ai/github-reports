@@ -126,7 +126,7 @@ def generate_team_report(team_number):
     print("-" * 150)
 
     # Display definitions for report metrics
-    print("\nDEFINITIONS:")
+    print("\nAPPENDIX:")
     print("Commits: Total number of commits made by the developer.")
     print("Last Commit: Date of the most recent commit by the developer.")
     print("Avg Commit Size: Average lines of code added per commit.")
@@ -134,7 +134,7 @@ def generate_team_report(team_number):
     print("PR/Commit Ratio: Ratio of pull requests raised per commit.")
     print("Time/Commit: Average time in days between commits.")
     print("\n**************************End of Github Productivity Reporting******************************\n\n")
-
+    print("**")
 
 # Main program logic
 def main():
