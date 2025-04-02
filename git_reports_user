@@ -1,0 +1,55 @@
+import requests
+
+def get_github_repos(username, token):
+    """
+    Fetches both public and private repositories for a given GitHub username.
+    Requires a Personal Access Token (PAT) for authentication.
+    The function also retrieves the number of commits for each repository.
+    """
+    url = "https://api.github.com/user/repos?per_page=100&type=all"
+    headers = {'Authorization': f'token {token}'}
+    
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        repos = response.json()
+        repo_list = []
+        for repo in repos:
+            if repo['owner']['login'] == username:
+                commit_count = get_commit_count(username, repo['name'], token)
+                repo_list.append({
+                    'name': repo['name'],
+                    'visibility': 'Private' if repo['private'] else 'Public',
+                    'commit_count': commit_count
+                })
+        return repo_list
+    else:
+        print(f"Failed to fetch repositories for {username}: {response.status_code} - {response.json().get('message', '')}")
+        return []
+
+def get_commit_count(username, repo_name, token):
+    """Fetches the number of commits for a given repository."""
+    url = f"https://api.github.com/repos/{username}/{repo_name}/commits?per_page=100"
+    headers = {'Authorization': f'token {token}'}
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        return len(response.json())
+    else:
+        print(f"Failed to fetch commit count for {repo_name}: {response.status_code} - {response.json().get('message', '')}")
+        return 0
+
+if __name__ == "__main__":
+    github_username = input("Enter GitHub username: ")
+    github_token = "{to add Github PAT}"
+    
+    repositories = get_github_repos(github_username, github_token)
+    
+    if repositories:
+        print(f"\nRepositories for {github_username}:")
+        print("Repository Name               Visibility    Commit Count")
+        print("-" * 60)
+        for repo in repositories:
+            print(f"{repo['name']:<30} {repo['visibility']:<10} {repo['commit_count']:<10}")
+    else:
+        print("No repositories found.")
