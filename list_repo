@@ -1,3 +1,26 @@
+/********************* GITHUB PRODUCTIVITY REPORTING FOR NARVAR-ENG ***************************
+
+Reporting Period: 2025-05-12 07:29 (UTC) to 2025-06-11 07:29 (UTC)
+
+Author               Commits    Last Commit         Lines Added      Lines Deleted  Avg Commit Size  Active Days   PR/Commit  Time/Commit  Code Churn
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ishasingh0172        0          No commits           0               0               0               0            0               0               0         
+debarko              0          No commits           0               0               0               0            0               0               0         
+dipankarbanik        0          No commits           0               0               0               0            0               0               0         
+phuongle1902         0          No commits           0               0               0               0            0               0               0         
+bis-ai               0          No commits           0               0               0               0            0               0               0         
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+DEFINITIONS:
+Commits: Total number of commits made by the developer.
+Last Commit: Date of the most recent commit by the developer.
+Avg Commit Size: Average lines of code added per commit.
+Active Days: Number of days the developer committed code.
+PR/Commit Ratio: Ratio of pull requests raised per commit.
+Time/Commit: Average time in days between commits.
+**************************End of Github Productivity Reporting******************************/
+
+
 import requests
 
 def get_github_repos(username, token):
